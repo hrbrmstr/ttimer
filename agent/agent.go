@@ -2,12 +2,11 @@ package agent
 
 import (
 	"fmt"
-	. "fmt"
 	"math"
 	"strings"
 	"time"
 
-	"github.com/0xAX/notificator"
+	"github.com/gen2brain/beeep"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 )
@@ -63,15 +62,10 @@ type Timer struct {
 func (t *Timer) Start(d time.Duration) {
 	t.duration = d
 	if t.Title == "" {
-		t.Title = Sprintf("%v Timer", d)
+		t.Title = fmt.Sprintf("%v Timer", d)
 	}
 	// strip monotonic time to account for system changes
 	t.end = time.Now().Add(t.duration).Round(0)
-
-	// init notificator
-	notify := notificator.New(notificator.Options{
-		AppName: t.Title,
-	})
 
 	// set and execute pre-notify
 	seconds := t.duration.Seconds()
@@ -80,16 +74,14 @@ func (t *Timer) Start(d time.Duration) {
 			almostSec := math.Floor(seconds * .9)
 			almostDur := time.Duration(almostSec) * time.Second
 			<-AfterWallClock(almostDur)
-			message := Sprintf("%v left", t.left)
-			_ = notify.Push(
-				"", message, "", notificator.UR_CRITICAL)
+			message := fmt.Sprintf("%v left", t.left)
+			beeep.Notify(t.Title, message, "")
 		}()
 	}
 	// set and execute notify
 	go func() {
 		<-AfterWallClock(t.duration)
-		_ = notify.Push(
-			"", "Finished", "", notificator.UR_CRITICAL)
+		beeep.Notify(t.Title, "Finished", "")
 		t.finished = true
 	}()
 }
@@ -124,17 +116,17 @@ func (t *Timer) update() {
 		floorSeconds := math.Floor(exactLeft.Seconds())
 		t.left = time.Duration(floorSeconds) * time.Second
 		endTime := time.Now().Add(t.left)
-		t.status = Sprintf("%v", t.left)
+		t.status = fmt.Sprintf("%v", t.left)
 		// Don't duplicate the title if this is already an end time based timer
 		if !(strings.Contains(t.Title, "a") || strings.Contains(t.Title, "p")) {
 			t.status += " " + shortTimeString(endTime)
 		}
 		if t.Debug {
 			t.status += "\n"
-			t.status += Sprintf("\nnow: %v", now)
-			t.status += Sprintf("\nexactLeft: %v", exactLeft)
-			t.status += Sprintf("\nt.end: %v", t.end)
-			t.status += Sprintf("\nt.end.Sub(now): %v", t.end.Sub(now))
+			t.status += fmt.Sprintf("\nnow: %v", now)
+			t.status += fmt.Sprintf("\nexactLeft: %v", exactLeft)
+			t.status += fmt.Sprintf("\nt.end: %v", t.end)
+			t.status += fmt.Sprintf("\nt.end.Sub(now): %v", t.end.Sub(now))
 		}
 	}
 }
@@ -169,11 +161,11 @@ func (t *Timer) CountDown(opts ...countdownOption) {
 	p.Border = false
 
 	// draw
-	banner := Sprintf("== %s ==", t.Title)
+	banner := fmt.Sprintf("== %s ==", t.Title)
 	draw := func(tick int) {
 		t.update()
 		// render
-		p.Text = Sprintf("%s\n%v",
+		p.Text = fmt.Sprintf("%s\n%v",
 			banner,
 			t.status)
 		ui.Render(p)
